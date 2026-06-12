@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Gaming Polarisation ABM - Two-Dimensional Opinion Dynamics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎮 Gaming Polarisation ABM</h1>
+            <p>Two-Dimensional Opinion Dynamics | Social Judgment Theory | Assimilation-Contrast Effects</p>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Left Panel: Parameters -->
+            <div class="params-panel">
+                <div class="param-section">
+                    <h3>🏘️ Community Settings</h3>
+                    <div class="param-row">
+                        <label>num-agents</label>
+                        <input type="range" id="numAgents" min="10" max="300" step="10" value="100">
+                        <span class="value-display" id="numAgentsVal">100</span>
+                    </div>
+                    <div class="param-row">
+                        <label>avg-connections</label>
+                        <input type="range" id="avgConnections" min="1" max="20" step="1" value="5">
+                        <span class="value-display" id="avgConnectionsVal">5</span>
+                    </div>
+                </div>
+
+                <div class="param-section">
+                    <h3>🧑 Individual Settings</h3>
+                    <div class="param-row">
+                        <label>importance-attitude-A</label>
+                        <input type="range" id="importanceA" min="0" max="1" step="0.05" value="0.5">
+                        <span class="value-display" id="importanceAVal">0.50</span>
+                    </div>
+                    <div class="param-row">
+                        <label>tolerance-attitude-A</label>
+                        <input type="range" id="toleranceA" min="0.1" max="0.8" step="0.05" value="0.3">
+                        <span class="value-display" id="toleranceAVal">0.30</span>
+                    </div>
+                    <div class="param-row">
+                        <label>tolerance-attitude-B</label>
+                        <input type="range" id="toleranceB" min="0.1" max="0.8" step="0.05" value="0.3">
+                        <span class="value-display" id="toleranceBVal">0.30</span>
+                    </div>
+                </div>
+
+                <div class="param-section">
+                    <h3>🔄 Interaction Mode</h3>
+                    <div class="param-row">
+                        <label>interaction-order</label>
+                        <select id="interactionOrder">
+                            <option value="0-importance-based">importance-based</option>
+                            <option value="1-high agreement">high agreement</option>
+                            <option value="2-low agreement">low agreement</option>
+                        </select>
+                    </div>
+                    <div class="param-row">
+                        <label>interaction-rule</label>
+                        <select id="interactionRule">
+                            <option value="0-central only">central only</option>
+                            <option value="1-with peripheral">with peripheral</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="control-buttons">
+                    <button class="btn btn-setup" id="setupBtn">SETUP</button>
+                    <button class="btn btn-once" id="stepBtn">GO ONCE</button>
+                    <button class="btn btn-go" id="runBtn">GO</button>
+                    <button class="btn btn-stop" id="stopBtn">STOP</button>
+                </div>
+            </div>
+
+            <!-- Right Panel: Visualization + Statistics -->
+            <div class="viz-stats-container">
+                <!-- Canvas Container -->
+                <div class="canvas-container">
+                    <div class="top-bar">
+                        <div class="toggle-row">
+                            <label><input type="checkbox" id="showLinksCheckbox" checked> 🔗 Show Connections</label>
+                        </div>
+                        <div class="agent-count">
+                            👥 Agent Space: <span id="agentCount">0</span> active
+                        </div>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="agentCanvas" width="550" height="550"></canvas>
+                    </div>
+                    <div class="legend">
+                        <span><div class="color-dot" style="background:#ff69b4;"></div> Support</span>
+                        <span><div class="color-dot" style="background:#a0a0a0;"></div> Neutral</span>
+                        <span><div class="color-dot" style="background:#4169e1;"></div> Oppose</span>
+                        <span><div class="color-dot" style="background:#888;"></div> Left=Att.A | Right=Att.B</span>
+                    </div>
+                    <div class="strength-legend">
+                        <span>⚫ Connection: darker = stronger, lighter = weaker</span>
+                    </div>
+                </div>
+
+                <!-- Statistics Panel -->
+                <div class="stats-panel">
+                    <div class="stat-group">
+                        <h4>📊 Opinion Distribution</h4>
+                        <div class="stat-row support">
+                            <span class="stat-label">👍 SUPPORTERS</span>
+                            <div><span class="stat-number" id="suppoCount">0</span><span class="stat-percent" id="suppoPct">(0%)</span></div>
+                        </div>
+                        <div class="stat-row neutral">
+                            <span class="stat-label">😐 NEUTRAL</span>
+                            <div><span class="stat-number" id="neutCount">0</span><span class="stat-percent" id="neutPct">(0%)</span></div>
+                        </div>
+                        <div class="stat-row oppose">
+                            <span class="stat-label">👎 OPPONENTS</span>
+                            <div><span class="stat-number" id="oppoCount">0</span><span class="stat-percent" id="oppoPct">(0%)</span></div>
+                        </div>
+                    </div>
+
+                    <div class="stat-group">
+                        <h4>📈 Correlation &amp; Heterogeneity</h4>
+                        <div class="corr-row">
+                            <span class="corr-label">A-B Correlation:</span>
+                            <span class="corr-value" id="corrValue">0.00</span>
+                        </div>
+                        <div class="corr-row">
+                            <span class="corr-label">Heterogeneity Index:</span>
+                            <span class="corr-value" id="heteroValue">0.00</span>
+                        </div>
+                        <div class="corr-row">
+                            <span class="corr-label">Consonance Index:</span>
+                            <span class="corr-value" id="consonanceValue">0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-group">
+                        <h4>⏱️ Simulation Info</h4>
+                        <div class="corr-row">
+                            <span class="corr-label">Current Tick:</span>
+                            <span class="corr-value" id="tickValue">0</span>
+                        </div>
+                        <div class="corr-row">
+                            <span class="corr-label">Max Ticks:</span>
+                            <span class="corr-value" id="maxTicksValue">1000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <h3>📊 Opinion Distribution Analysis</h3>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h4>Opinion Dynamics</h4>
+                    <canvas id="trendChart" class="chart-canvas"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4>%Opinion Distribution</h4>
+                    <canvas id="opinionDistChart" class="chart-canvas"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4>%Attitude-A Distribution</h4>
+                    <canvas id="attitudeADistChart" class="chart-canvas"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4>%Attitude-B Distribution</h4>
+                    <canvas id="attitudeBDistChart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingToast">▶ Simulation running...</div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
